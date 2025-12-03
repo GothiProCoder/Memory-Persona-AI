@@ -12,7 +12,7 @@
 [![Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-orange?style=for-the-badge)](requirements.txt)
 [![Code Coverage](https://img.shields.io/badge/coverage-95%25-green?style=for-the-badge)](tests/)
 
-• [Live Demo](https://memory-persona-ai.streamlit.app/) • [Read Docs](#) • [Report Bug](../../issues) • [Request Feature](../../issues)
+[Live Demo](https://memory-persona-ai.streamlit.app/) • [Read Docs](#) • [Report Bug](../../issues) • [Request Feature](../../issues)
 
 </div>
 
