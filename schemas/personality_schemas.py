@@ -1,0 +1,53 @@
+"""
+Pydantic models for personality transformation output
+https://docs.langchain.com/oss/python/langchain/structured-output
+"""
+
+from pydantic import BaseModel, Field
+from typing import List, Literal
+
+
+class PersonalityResponse(BaseModel):
+    """
+    Response from a single personality type
+    """
+    personality_type: Literal["mentor", "friend", "therapist"] = Field(
+        description="The personality type used for this response"
+    )
+    response: str = Field(
+        description="The generated response in the specified personality tone"
+    )
+    tone_characteristics: List[str] = Field(
+        description="Key characteristics of this personality's tone"
+    )
+    approach: str = Field(
+        description="The approach used in this response"
+    )
+
+
+class PersonalityTransformationResult(BaseModel):
+    """
+    Complete personality transformation result with multiple personality responses
+    Using ProviderStrategy(PersonalityTransformationResult) for Gemini native structured output
+    https://docs.langchain.com/oss/python/langchain/structured-output
+    """
+    user_query: str = Field(
+        description="The original user query"
+    )
+    responses: List[PersonalityResponse] = Field(
+        description="Responses from different personality types"
+    )
+    analysis: str = Field(
+        description="Brief analysis of how each personality approaches the query"
+    )
+
+
+class PersonalityComparison(BaseModel):
+    """
+    Comparison data for displaying before/after personality differences
+    """
+    query: str = Field(description="The original query")
+    mentor_response: str = Field(description="Mentor personality response")
+    friend_response: str = Field(description="Friend personality response")
+    therapist_response: str = Field(description="Therapist personality response")
+    analysis: str = Field(description="Comparative analysis of responses")

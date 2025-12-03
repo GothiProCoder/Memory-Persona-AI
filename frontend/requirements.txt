@@ -1,0 +1,5 @@
+# Memory Extraction & Personality Engine - Streamlit Frontend
+
+streamlit
+requests
+python-dotenv
