@@ -9,10 +9,6 @@ uvicorn[standard]
 # LangChain ecosystem
 langchain-core
 langchain-google-genai
-
-# Google Gemini Integration
-google-generativeai
-
 langchain
 langgraph
 
