@@ -48,8 +48,6 @@ header {visibility: hidden;} */
 /* Sidebar Styling */
 section[data-testid="stSidebar"] {
     width: 310px !important;
-    min-width: 290px !important;
-    max-width: 320px !important;
     background-color: #F8F9FB;
     border-right: 1px solid var(--border-color);
 }
