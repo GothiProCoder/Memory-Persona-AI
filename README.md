@@ -20,7 +20,7 @@
 
 ## ✨ About The Project
 
-<img src="https://via.placeholder.com/400x300" align="right" alt="Dashboard Screenshot" width="400" style="margin-left: 20px;">
+<img src="/assets/frontend.png" align="right" alt="Dashboard Screenshot" width="400" style="margin-left: 20px;">
 
 > **Problem**: Most AI chatbots are ephemeral—they forget who you are the moment you close the tab. They lack context, emotional continuity, and personal connection.
 >
