@@ -40,15 +40,21 @@ Memory Persona AI isn't just another wrapper around an LLM. It's a sophisticated
 ![LangChain](https://img.shields.io/badge/LangChain-1.0+-1C3C3C?style=flat-square&logo=chainlink&logoColor=white)
 ![Google Gemini](https://img.shields.io/badge/Gemini%202.5%20Flash-4285F4?style=flat-square&logo=google&logoColor=white)
 
-<details>
+<details open>
 <summary>📸 <b>See More Screenshots</b></summary>
 <br>
 <div align="center">
-  <img src="https://via.placeholder.com/600x400" alt="Memory Extraction Process">
-  <p><i>Memory Extraction Process Visualization</i></p>
+  <img src="/assets/frontend.png" alt="Frontend">
+  <p><i>Frontend</i></p>
   <br>
-  <img src="https://via.placeholder.com/600x400" alt="Personality Configuration">
-  <p><i>Personality Configuration Dashboard</i></p>
+  <img src="/assets/memory-core.png" alt="Memory Core">
+  <p><i>Memory Core</i></p>
+  <br>
+  <img src="/assets/extracted-emotional-patterns.png" alt="Memory Core">
+  <p><i>Extracted Emotional Patterns</i></p>
+  <br>
+  <img src="/assets/Manual-Memory-Extraction.png" alt="Memory Core">
+  <p><i>Manual Memory Extraction</i></p>
 </div>
 </details>
 
@@ -58,7 +64,7 @@ Memory Persona AI isn't just another wrapper around an LLM. It's a sophisticated
 
 ## 🚀 Features
 
-<details>
+<details open>
 <summary>Click to view detailed Feature Breakdown</summary>
 
 ### Core Capabilities
@@ -173,7 +179,7 @@ Memory-Persona-AI/
     ```
 
 ### Common Issues
-<details>
+<details open>
 <summary>Click to view Troubleshooting Guide</summary>
 
 | Issue | Solution |
