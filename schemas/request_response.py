@@ -1,5 +1,8 @@
 """
-API request and response schemas
+API request and response schemas.
+
+This module defines the Pydantic models used for API input validation and output
+serialization. It serves as the contract between the frontend/client and the backend.
 """
 
 from pydantic import BaseModel, Field
@@ -7,14 +10,21 @@ from typing import List, Dict, Any
 
 
 class ChatMessage(BaseModel):
-    """Single chat message"""
+    """
+    Single chat message schema.
+    
+    Represents a message in a conversation history, compatible with standard
+    chat formats (role/content).
+    """
     role: str = Field(description="Role: 'user' or 'assistant'")
     content: str = Field(description="Message content")
 
 
 class MemoryExtractionRequest(BaseModel):
     """
-    Request for memory extraction endpoint
+    Request for memory extraction endpoint.
+    
+    Payload for submitting a batch of messages to be analyzed for memory extraction.
     """
     messages: List[ChatMessage] = Field(
         description="List of 30+ chat messages to analyze"
@@ -27,7 +37,9 @@ class MemoryExtractionRequest(BaseModel):
 
 class MemoryExtractionResponse(BaseModel):
     """
-    Response from memory extraction endpoint
+    Response from memory extraction endpoint.
+    
+    Returns the status of the extraction process and the extracted data.
     """
     status: str = Field(description="Status of extraction (success/error)")
     data: Dict[str, Any] = Field(description="Extracted memory data")
@@ -37,7 +49,9 @@ class MemoryExtractionResponse(BaseModel):
 
 class PersonalityRequest(BaseModel):
     """
-    Request for personality transformation endpoint
+    Request for personality transformation endpoint.
+    
+    Payload for requesting a personality-transformed response to a user query.
     """
     query: str = Field(description="User query to transform")
     personality_types: List[str] = Field(
@@ -51,7 +65,12 @@ class PersonalityRequest(BaseModel):
 
 
 class PersonalityResponseItem(BaseModel):
-    """Single personality response item"""
+    """
+    Single personality response item schema.
+    
+    Used within the `PersonalityTransformationResponse` to detail a specific
+    personality's output.
+    """
     personality_type: str
     response: str
     tone_characteristics: List[str]
@@ -60,7 +79,10 @@ class PersonalityResponseItem(BaseModel):
 
 class PersonalityTransformationResponse(BaseModel):
     """
-    Response from personality transformation endpoint
+    Response from personality transformation endpoint.
+    
+    Contains the transformed responses for each requested personality type
+    and an analysis of the differences.
     """
     status: str = Field(description="Status (success/error)")
     original_query: str = Field(description="The original query")
@@ -70,14 +92,20 @@ class PersonalityTransformationResponse(BaseModel):
 
 
 class HealthCheckResponse(BaseModel):
-    """Health check response"""
+    """
+    Health check response schema.
+    
+    Used by the health check endpoint to report system status.
+    """
     status: str = Field(description="Status (healthy/unhealthy)")
     version: str = Field(description="API version")
     timestamp: str = Field(description="ISO timestamp")
 
 class GenericRequest(BaseModel):
     """
-    Request for generic (non-personalized) response endpoint
+    Request for generic (non-personalized) response endpoint.
+    
+    Used for comparison or fallback when personalization is not required.
     """
     query: str = Field(description="User query")
     user_id: str = Field(
@@ -87,9 +115,7 @@ class GenericRequest(BaseModel):
 
 class GenericResponse(BaseModel):
     """
-    Response from generic (non-personalized) endpoint
-    Per LangChain structured output docs:
-    [https://docs.langchain.com/oss/python/langchain/structured-output](https://docs.langchain.com/oss/python/langchain/structured-output)
+    Response from generic (non-personalized) endpoint.
     """
     status: str = Field(description="Status (success/error)")
     query: str = Field(description="The original query")

@@ -1,19 +1,20 @@
-# FastAPI & Web Framework
-fastapi
-uvicorn[standard]
+# Core dependencies first
 pydantic
 pydantic-settings
 
-# LangChain & LangGraph (Core Documentation)
-# https://docs.langchain.com/oss/python/langchain/install
-langchain
-langchain-google-genai
-langgraph
+# FastAPI & Web Framework
+fastapi
+uvicorn[standard]
+
+# LangChain ecosystem
 langchain-core
+langchain-google-genai
 
 # Google Gemini Integration
-# https://docs.langchain.com/oss/python/integrations/providers/google
 google-generativeai
+
+langchain
+langgraph
 
 # Data Processing
 python-dotenv

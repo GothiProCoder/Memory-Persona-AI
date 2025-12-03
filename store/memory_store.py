@@ -1,6 +1,9 @@
 """
-InMemoryStore implementation for long-term memory
-https://docs.langchain.com/oss/python/langchain/long-term-memory
+InMemoryStore implementation for long-term memory.
+
+This module provides a wrapper around LangGraph's InMemoryStore to manage
+user memories. It handles saving, retrieving, and deleting memory data
+associated with specific users.
 """
 
 from langgraph.store.memory import InMemoryStore
@@ -13,25 +16,37 @@ logger = get_logger(__name__)
 
 class MemoryStore:
     """
-    Wrapper around LangGraph's InMemoryStore for managing long-term user memories
-    https://docs.langchain.com/oss/python/langchain/long-term-memory
+    Wrapper around LangGraph's InMemoryStore for managing long-term user memories.
+    
+    This class abstracts the underlying storage mechanism (currently in-memory)
+    and provides a simple API for memory operations keyed by user ID.
     """
     
     def __init__(self):
-        """Initialize the in-memory store"""
+        """
+        Initialize the in-memory store.
+        
+        Sets up the underlying LangGraph InMemoryStore.
+        """
         self.store = InMemoryStore()
         logger.info("✓ InMemoryStore initialized")
     
     def save_user_memory(self, user_id: str, memory_data: Dict[str, Any]) -> None:
         """
-        Save user memory to the store
+        Save user memory to the store.
+        
+        Stores the provided memory data under a namespace specific to users.
         
         Args:
-            user_id: User identifier
-            memory_data: Memory data to store (preferences, patterns, facts)
+            user_id (str): User identifier used as the key.
+            memory_data (Dict[str, Any]): Memory data to store (preferences, patterns, facts).
+            
+        Raises:
+            StoreError: If the save operation fails.
         """
         try:
             # Store with tuple namespace: ("users", user_id)
+            # This namespacing strategy allows for easy separation of data types
             self.store.put(
                 namespace=("users",),
                 key=user_id,
@@ -44,13 +59,16 @@ class MemoryStore:
     
     def get_user_memory(self, user_id: str) -> Optional[Dict[str, Any]]:
         """
-        Retrieve user memory from the store
+        Retrieve user memory from the store.
         
         Args:
-            user_id: User identifier
+            user_id (str): User identifier.
             
         Returns:
-            Memory data if found, None otherwise
+            Optional[Dict[str, Any]]: Memory data if found, None otherwise.
+            
+        Raises:
+            StoreError: If the retrieval operation fails.
         """
         try:
             result = self.store.get(
@@ -69,10 +87,13 @@ class MemoryStore:
     
     def delete_user_memory(self, user_id: str) -> None:
         """
-        Delete user memory from the store
+        Delete user memory from the store.
         
         Args:
-            user_id: User identifier
+            user_id (str): User identifier to delete.
+            
+        Raises:
+            StoreError: If the delete operation fails.
         """
         try:
             self.store.delete(
@@ -86,10 +107,15 @@ class MemoryStore:
     
     def list_user_memories(self) -> Dict[str, Any]:
         """
-        List all stored user memories
+        List all stored user memories.
+        
+        Iterates through the 'users' namespace to find all stored memory items.
         
         Returns:
-            Dictionary of all stored memories
+            Dict[str, Any]: Dictionary of all stored memories where keys are user_ids.
+            
+        Raises:
+            StoreError: If the listing operation fails.
         """
         try:
             memories = {}
@@ -104,7 +130,12 @@ class MemoryStore:
             raise StoreError(f"Failed to list memories: {str(e)}")
     
     def get_store(self) -> InMemoryStore:
-        """Get the underlying store instance for agent runtime"""
+        """
+        Get the underlying store instance for agent runtime.
+        
+        Returns:
+            InMemoryStore: The raw LangGraph store instance.
+        """
         return self.store
 
 
@@ -114,7 +145,12 @@ _store_instance: Optional[MemoryStore] = None
 
 def get_memory_store() -> MemoryStore:
     """
-    Get or create the global memory store instance
+    Get or create the global memory store instance.
+    
+    Implements the Singleton pattern for the memory store.
+    
+    Returns:
+        MemoryStore: The global memory store instance.
     """
     global _store_instance
     if _store_instance is None:

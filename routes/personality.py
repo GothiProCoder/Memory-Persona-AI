@@ -1,5 +1,9 @@
 """
-Personality transformation API endpoints
+Personality transformation API endpoints.
+
+This module defines the REST API endpoints for the personality transformation feature.
+It handles requests to generate responses in different personality styles
+(Mentor, Friend, Therapist) based on user queries and stored memories.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -17,7 +21,11 @@ router = APIRouter(prefix="/api/v1/personality", tags=["personality"])
 @router.post("/transform", response_model=PersonalityTransformationResponse)
 async def transform_with_personality(request: PersonalityRequest) -> PersonalityTransformationResponse:
     """
-    Transform a response with different personality types
+    Transform a response with different personality types.
+    
+    Generates multiple responses to a single query, each adopting a different
+    personality archetype (Mentor, Friend, Therapist) and incorporating
+    user-specific memories.
     
     Endpoint: POST /api/v1/personality/transform
     
@@ -45,6 +53,15 @@ async def transform_with_personality(request: PersonalityRequest) -> Personality
         "analysis": "Each personality brings unique perspective...",
         "message": "Personality responses generated successfully"
     }
+    
+    Args:
+        request (PersonalityRequest): Input query and requested personalities.
+        
+    Returns:
+        PersonalityTransformationResponse: The generated responses and comparative analysis.
+        
+    Raises:
+        HTTPException: If input is invalid (400) or generation fails (500).
     """
     try:
         logger.info(f"Received personality transformation request: {request.personality_types}")
@@ -53,10 +70,11 @@ async def transform_with_personality(request: PersonalityRequest) -> Personality
         if not request.query or not request.query.strip():
             raise ValueError("Query cannot be empty")
         
+        # Default to all personality types if none specified
         if not request.personality_types:
             request.personality_types = ["mentor", "friend", "therapist"]
         
-        # Validate personality types
+        # Validate personality types against allowed set
         valid_types = {"mentor", "friend", "therapist"}
         invalid_types = set(request.personality_types) - valid_types
         if invalid_types:
@@ -70,7 +88,7 @@ async def transform_with_personality(request: PersonalityRequest) -> Personality
             user_id=request.user_id
         )
         
-        # Generate comparison analysis
+        # Generate comparison analysis for the frontend
         analysis = _generate_analysis(request.query, responses)
         
         return PersonalityTransformationResponse(
@@ -93,12 +111,25 @@ async def transform_with_personality(request: PersonalityRequest) -> Personality
 
 
 def _generate_analysis(query: str, responses: Dict[str, Any]) -> str:
-    """Generate a comparative analysis of the different personality responses"""
+    """
+    Generate a comparative analysis of the different personality responses.
+    
+    Helper function to create a summary string explaining how each personality
+    approached the query.
+    
+    Args:
+        query (str): The original user query.
+        responses (Dict[str, Any]): The generated responses.
+        
+    Returns:
+        str: A text summary of the approaches.
+    """
     analysis = f"Analysis for query: '{query}'\n\n"
     
     success_count = sum(1 for r in responses.values() if "error" not in r)
     analysis += f"Generated {success_count} personality responses.\n\n"
     
+    # Add descriptions for each successfully generated personality response
     if "mentor" in responses and "error" not in responses.get("mentor", {}):
         analysis += "**Mentor approach**: Provides structured guidance and learning-focused advice.\n\n"
     
@@ -117,9 +148,20 @@ def _generate_analysis(query: str, responses: Dict[str, Any]) -> str:
 async def get_generic_response(request: GenericRequest) -> GenericResponse:
     """
     Return a generic, non-personalized response.
-    Frontend will label this as 'BEFORE' in the UI.
+    
+    Frontend will label this as 'BEFORE' in the UI. This serves as a control
+    group to demonstrate the value of personalization.
     
     Endpoint: POST /api/v1/personality/generic
+    
+    Args:
+        request (GenericRequest): The user query.
+        
+    Returns:
+        GenericResponse: The neutral AI response.
+        
+    Raises:
+        HTTPException: If input is invalid (400) or generation fails (500).
     """
     try:
         if not request.query or not request.query.strip():

@@ -1,5 +1,9 @@
 """
-Memory extraction API endpoints
+Memory extraction API endpoints.
+
+This module defines the REST API endpoints for the memory extraction feature.
+It handles requests to analyze chat messages and extract user memories,
+returning structured insights.
 """
 
 from fastapi import APIRouter, HTTPException
@@ -17,7 +21,10 @@ router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 @router.post("/extract", response_model=MemoryExtractionResponse)
 async def extract_memories(request: MemoryExtractionRequest) -> MemoryExtractionResponse:
     """
-    Extract user memories, preferences, and emotional patterns from chat messages
+    Extract user memories, preferences, and emotional patterns from chat messages.
+    
+    This endpoint processes a batch of chat messages using the Memory Extraction Agent
+    to identify and store key information about the user.
     
     Endpoint: POST /api/v1/memory/extract
     
@@ -41,6 +48,15 @@ async def extract_memories(request: MemoryExtractionRequest) -> MemoryExtraction
         "message": "Memory extraction completed",
         "messages_analyzed": 30
     }
+    
+    Args:
+        request (MemoryExtractionRequest): The input request containing messages and user ID.
+        
+    Returns:
+        MemoryExtractionResponse: The result of the extraction process.
+        
+    Raises:
+        HTTPException: If input is invalid (400) or extraction fails (500).
     """
     try:
         logger.info(f"Received memory extraction request for {len(request.messages)} messages")
@@ -49,10 +65,11 @@ async def extract_memories(request: MemoryExtractionRequest) -> MemoryExtraction
         if not request.messages:
             raise ValueError("Messages list cannot be empty")
         
+        # Provide a warning if message count is low, as it affects extraction quality
         if len(request.messages) < 10:
             logger.warning(f"Only {len(request.messages)} messages provided (recommended: 30+)")
         
-        # Convert Pydantic models to dictionaries
+        # Convert Pydantic models to dictionaries for internal processing
         messages_data = [
             {"role": msg.role, "content": msg.content}
             for msg in request.messages
@@ -83,7 +100,9 @@ async def extract_memories(request: MemoryExtractionRequest) -> MemoryExtraction
 @router.get("/user/{user_id}", response_model=Dict[str, Any])
 async def get_user_memories(user_id: str) -> Dict[str, Any]:
     """
-    Retrieve stored memories for a specific user
+    Retrieve stored memories for a specific user.
+    
+    Fetches the accumulated memory profile for a user from the persistent store.
     
     Endpoint: GET /api/v1/memory/user/{user_id}
     
@@ -96,6 +115,15 @@ async def get_user_memories(user_id: str) -> Dict[str, Any]:
             "memorable_facts": [...]
         }
     }
+    
+    Args:
+        user_id (str): The user identifier.
+        
+    Returns:
+        Dict[str, Any]: A dictionary containing the user's stored memories.
+        
+    Raises:
+        HTTPException: If no memories are found (404) or retrieval fails (500).
     """
     try:
         from agents.memory_extraction_agent import get_memory_extraction_agent

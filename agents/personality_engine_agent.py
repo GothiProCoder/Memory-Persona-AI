@@ -1,18 +1,18 @@
 """
-Personality Transformation Agent using LangChain's create_agent()
-Transforms responses based on stored user memories and selected personality type
-https://docs.langchain.com/oss/python/langchain/agents
-https://docs.langchain.com/oss/python/langchain/structured-output
+Personality Transformation Agent using LangChain's create_agent().
+
+This module defines the agent responsible for transforming system responses based
+on selected personality archetypes (Mentor, Friend, Therapist) and user memory.
+It utilizes LangChain's middleware capabilities to inject personality-specific
+system prompts and user context dynamically.
 """
 
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ProviderStrategy, ToolStrategy
 from langchain.agents.middleware import dynamic_prompt, ModelRequest
 from langchain.messages import HumanMessage
 
-from schemas.personality_schemas import PersonalityResponse
 from models.gemini_model import ModelFactory
 from store.memory_store import get_memory_store
 from utils.logger import get_logger
@@ -24,8 +24,10 @@ logger = get_logger(__name__)
 @dataclass
 class PersonalityContext:
     """
-    Context for personality transformation agent
-    https://docs.langchain.com/oss/python/langchain/runtime
+    Context for personality transformation agent.
+    
+    Stores the necessary context variables (user ID, personality type) for the
+    dynamic prompt middleware to customize the agent's behavior at runtime.
     """
     user_id: str
     personality_type: str
@@ -33,12 +35,13 @@ class PersonalityContext:
 
 class PersonalityEngineAgent:
     """
-    Agent for transforming responses based on personality type while using user memories
-    Uses create_agent() with dynamic middleware for personality-specific system prompts
-    https://docs.langchain.com/oss/python/langchain/agents
-    https://docs.langchain.com/oss/python/langchain/structured-output
+    Agent for transforming responses based on personality type while using user memories.
+    
+    Uses create_agent() with dynamic middleware for personality-specific system prompts.
+    It manages a set of distinct personalities and applies them to user queries.
     """
     
+    # Pre-defined system prompts for each personality archetype
     PERSONALITY_PROMPTS = {
         "mentor": """You are a wise, patient mentor with deep expertise. Your approach:
 - Provide thoughtful guidance rooted in experience
@@ -66,15 +69,32 @@ class PersonalityEngineAgent:
     }
     
     def __init__(self):
-        """Initialize the personality engine agent"""
+        """
+        Initialize the personality engine agent.
+        
+        Sets up the base model and memory store access. It also initializes a
+        dictionary to cache agent instances by personality type to avoid rebuilding them.
+        """
         self.model = ModelFactory.get_model()
         self.store = get_memory_store()
         self._agents = {}  # Cache agents by personality type
     
     def _build_agent(self, personality_type: str) -> Any:
         """
-        Build a personality-specific agent
-        https://docs.langchain.com/oss/python/langchain/agents
+        Build a personality-specific agent.
+        
+        Creates a new LangChain agent configured with the specific system prompt
+        for the requested personality type. It uses middleware to inject user
+        memory context dynamically before each invocation.
+        
+        Args:
+            personality_type (str): The type of personality to build (e.g., 'mentor').
+            
+        Returns:
+            Any: The configured agent runnable.
+            
+        Raises:
+            PersonalityGenerationError: If the agent cannot be built.
         """
         if personality_type in self._agents:
             return self._agents[personality_type]
@@ -83,7 +103,7 @@ class PersonalityEngineAgent:
             logger.info(f"Building {personality_type} personality agent...")
             
             # Create dynamic system prompt middleware
-            # https://docs.langchain.com/oss/python/langchain/agents (middleware section)
+            # This allows modifying the prompt at runtime based on the context
             @dynamic_prompt
             def personality_system_prompt(request: ModelRequest) -> str:
                 base_prompt = self.PERSONALITY_PROMPTS.get(
@@ -92,6 +112,7 @@ class PersonalityEngineAgent:
                 )
                 
                 # Inject user memory context if available
+                # Retrieves the user ID from the runtime context passed during invoke
                 user_id = getattr(request.runtime.context, 'user_id', 'default_user')
                 user_memory = self.store.get_user_memory(user_id)
                 
@@ -128,18 +149,22 @@ class PersonalityEngineAgent:
         user_id: str = "default_user"
     ) -> Dict[str, Any]:
         """
-        Generate a response with the specified personality type
+        Generate a response with the specified personality type.
+        
+        Orchestrates the response generation: selects the right agent, invokes it
+        with the user's query and context, and formats the output.
         
         Args:
-            query: User query to respond to
-            personality_type: Type of personality (mentor, friend, therapist)
-            user_id: User identifier for memory context
+            query (str): User query to respond to.
+            personality_type (str): Type of personality (mentor, friend, therapist).
+            user_id (str): User identifier for memory context.
             
         Returns:
-            Dictionary with personality response
+            Dict[str, Any]: Dictionary with personality response and metadata.
             
         Raises:
-            PersonalityGenerationError: If generation fails
+            PersonalityGenerationError: If generation fails.
+            StructuredOutputError: If the agent returns empty content.
         """
         try:
             if personality_type not in self.PERSONALITY_PROMPTS:
@@ -150,6 +175,7 @@ class PersonalityEngineAgent:
             agent = self._build_agent(personality_type)
             
             # Invoke agent
+            # Passes context so the middleware can access user_id
             result = agent.invoke(
                 {"messages": [HumanMessage(content=query)]},
                 context=PersonalityContext(
@@ -190,15 +216,18 @@ class PersonalityEngineAgent:
         user_id: str = "default_user"
     ) -> Dict[str, Any]:
         """
-        Generate responses for multiple personality types
+        Generate responses for multiple personality types.
+        
+        Iterates through the requested personality types and generates a response
+        for each one. Useful for side-by-side comparisons.
         
         Args:
-            query: User query
-            personality_types: List of personality types (defaults to all)
-            user_id: User identifier
+            query (str): User query.
+            personality_types (Optional[List[str]]): List of personality types (defaults to all).
+            user_id (str): User identifier.
             
         Returns:
-            Dictionary with all personality responses
+            Dict[str, Any]: Dictionary with all personality responses keyed by type.
         """
         if personality_types is None:
             personality_types = list(self.PERSONALITY_PROMPTS.keys())
@@ -218,7 +247,12 @@ class PersonalityEngineAgent:
         return responses
     
     def _format_memory_context(self, memory_data: Dict[str, Any]) -> str:
-        """Format memory data as context for the agent"""
+        """
+        Format memory data as context for the agent.
+        
+        Selects top items from user preferences, emotional patterns, and facts
+        to provide a concise context summary for the prompt.
+        """
         context = "IMPORTANT - User Context (use to personalize responses):\n"
         
         if memory_data.get("user_preferences"):
@@ -236,7 +270,7 @@ class PersonalityEngineAgent:
         return context
     
     def _get_tone_characteristics(self, personality_type: str) -> List[str]:
-        """Get tone characteristics for a personality type"""
+        """Get tone characteristics list for a personality type."""
         characteristics = {
             "mentor": ["patient", "educational", "encouraging", "experienced"],
             "friend": ["witty", "supportive", "casual", "genuine"],
@@ -245,7 +279,7 @@ class PersonalityEngineAgent:
         return characteristics.get(personality_type, [])
     
     def _get_approach_description(self, personality_type: str) -> str:
-        """Get approach description for a personality type"""
+        """Get text description of the approach for a personality type."""
         approaches = {
             "mentor": "Provides structured guidance with learning focus",
             "friend": "Offers support with casual, relatable tone",
@@ -257,6 +291,17 @@ class PersonalityEngineAgent:
         """
         Generate a neutral, generic response without using stored memory
         or any personality-specific prompt.
+        
+        Used as a baseline comparison to show the impact of the personality engine.
+        
+        Args:
+            query (str): The user query.
+            
+        Returns:
+            str: A neutral AI response.
+            
+        Raises:
+            PersonalityGenerationError: If the base model fails to respond.
         """
         try:
             prompt = (
@@ -285,7 +330,14 @@ class PersonalityEngineAgent:
     
 
 def get_personality_engine() -> PersonalityEngineAgent:
-    """Get or create the global personality engine instance"""
+    """
+    Get or create the global personality engine instance.
+    
+    Singleton pattern for efficient resource usage.
+    
+    Returns:
+        PersonalityEngineAgent: The global agent instance.
+    """
     if not hasattr(get_personality_engine, '_instance'):
         get_personality_engine._instance = PersonalityEngineAgent()
     return get_personality_engine._instance

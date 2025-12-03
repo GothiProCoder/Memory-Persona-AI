@@ -1,6 +1,9 @@
 """
-Pydantic models for personality transformation output
-https://docs.langchain.com/oss/python/langchain/structured-output
+Pydantic models for personality transformation output.
+
+This module defines the schemas for generating responses with specific personality
+traits. It allows the system to produce multiple variations of a response (e.g.,
+Mentor, Friend, Therapist) from a single query.
 """
 
 from pydantic import BaseModel, Field
@@ -9,7 +12,10 @@ from typing import List, Literal
 
 class PersonalityResponse(BaseModel):
     """
-    Response from a single personality type
+    Response from a single personality type.
+    
+    Contains the transformed response content along with metadata about how
+    the personality was applied.
     """
     personality_type: Literal["mentor", "friend", "therapist"] = Field(
         description="The personality type used for this response"
@@ -27,9 +33,12 @@ class PersonalityResponse(BaseModel):
 
 class PersonalityTransformationResult(BaseModel):
     """
-    Complete personality transformation result with multiple personality responses
+    Complete personality transformation result with multiple personality responses.
+    
+    This is the structured output returned by the Personality Engine Agent, containing
+    responses for all requested personality archetypes.
+    
     Using ProviderStrategy(PersonalityTransformationResult) for Gemini native structured output
-    https://docs.langchain.com/oss/python/langchain/structured-output
     """
     user_query: str = Field(
         description="The original user query"
@@ -44,7 +53,10 @@ class PersonalityTransformationResult(BaseModel):
 
 class PersonalityComparison(BaseModel):
     """
-    Comparison data for displaying before/after personality differences
+    Comparison data for displaying before/after personality differences.
+    
+    Used primarily for frontend display to show side-by-side comparisons of
+    how different personalities handle the same input.
     """
     query: str = Field(description="The original query")
     mentor_response: str = Field(description="Mentor personality response")

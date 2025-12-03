@@ -2,6 +2,15 @@ import streamlit as st
 from frontend.assets.icons import Icons
 
 def render_chat(api_client):
+    """
+    Render the Chat interface.
+    
+    This function handles the main chat UI, including input, context display,
+    and rendering of both generic and personalized responses.
+    
+    Args:
+        api_client: The initialized API client instance for making backend calls.
+    """
     st.markdown(f"""
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
             <div style="color: #6C63FF;">{Icons.CHAT}</div>
@@ -32,7 +41,7 @@ def render_chat(api_client):
             if mem_res.get("status") == "success" and mem_res.get("data"):
                 data = mem_res.get("data", {})
                 
-                # Extract top items to simulate backend logic
+                # Extract top items to simulate backend logic for display
                 prefs = [p['preference'] for p in data.get('user_preferences', [])[:3]]
                 facts = [f['fact'] for f in data.get('memorable_facts', [])[:2]]
                 
@@ -52,7 +61,7 @@ def render_chat(api_client):
                 st.caption("No memory context available.")
 
             # === BEFORE SECTION - GENERIC RESPONSE ===
-            # st.markdown("---")
+            # Show how a standard AI would respond
             st.markdown("""
             <div style="margin: 32px 0 24px 0;">
                 <h2 style="font-size: 1.5rem; font-weight: 700; color: #31333F; margin: 0 0 8px 0;">
@@ -85,20 +94,18 @@ def render_chat(api_client):
             else:
                 st.error(f"Generic response error: {generic_result.get('message')}")
 
-            # st.markdown("---")
-
             
             # 3. Personalized Responses (The "After" State)
             st.markdown("### 3. Personalized Responses")
             
-            # Fetch Response
+            # Fetch Response from backend
             with st.spinner("Generating Personalities..."):
                 result = api_client.transform_personality(query, st.session_state.user_id)
             
             if result.get("status") == "success":
                 responses = result.get("responses", {})
                 
-                # Layout: 3 Columns
+                # Layout: 3 Columns for side-by-side comparison
                 col1, col2, col3 = st.columns(3)
                 
                 # Mentor
@@ -147,6 +154,16 @@ def render_chat(api_client):
 
 
 def render_personality_card(title, content, tags, icon, border_class):
+    """
+    Helper to render a single personality card.
+    
+    Args:
+        title (str): Personality title (e.g. Mentor).
+        content (str): The generated response text.
+        tags (List[str]): Tone characteristics tags.
+        icon (str): SVG icon.
+        border_class (str): CSS class for border styling.
+    """
     tags_html = "".join([f'<span class="tone-tag">{tag}</span>' for tag in tags])
     
     st.markdown(f"""

@@ -1,13 +1,29 @@
 """
-API Client for GuppShupp Backend
+API Client for GuppShupp Backend.
+
+This module provides a Python client for interacting with the backend API.
+It handles HTTP requests, error handling, and response parsing for various
+endpoints including health checks, personality transformation, and memory operations.
 """
 import requests
 import os
-import time
 from typing import Dict, Any, List
 
 class APIClient:
+    """
+    Client wrapper for backend API calls.
+    
+    Encapsulates connection logic and error handling for the frontend.
+    """
+    
     def __init__(self, base_url: str = None):
+        """
+        Initialize the API client.
+        
+        Args:
+            base_url (str, optional): The base URL of the backend API.
+                Defaults to BACKEND_URL env var or localhost.
+        """
         if base_url:
             self.base_url = base_url
         else:
@@ -15,7 +31,12 @@ class APIClient:
         self.mock_mode = False  # Disabled mock mode to integrate with real backend
 
     def get_health(self) -> Dict[str, Any]:
-        """Check API health"""
+        """
+        Check API health.
+        
+        Returns:
+            Dict[str, Any]: Status dictionary containing health info or error details.
+        """
         try:
             response = requests.get(f"{self.base_url}/api/v1/health")
             if response.status_code == 200:
@@ -27,14 +48,23 @@ class APIClient:
             return {"status": "error", "message": f"Connection failed: {str(e)}"}
 
     def transform_personality(self, query: str, user_id: str = "default_user") -> Dict[str, Any]:
-        """Send query to personality transform endpoint"""
+        """
+        Send query to personality transform endpoint.
+        
+        Args:
+            query (str): The user's input text.
+            user_id (str): The ID of the user for personalization.
+            
+        Returns:
+            Dict[str, Any]: The backend response containing personalized answers.
+        """
         try:
             payload = {
                 "query": query,
                 "user_id": user_id,
                 "personality_types": ["mentor", "friend", "therapist"]
             }
-            # Increased timeout for LLM calls
+            # Increased timeout for LLM calls as generation can be slow
             response = requests.post(
                 f"{self.base_url}/api/v1/personality/transform", 
                 json=payload,
@@ -59,11 +89,16 @@ class APIClient:
             }
 
     def get_memory(self, user_id: str) -> Dict[str, Any]:
-        """Get memories for a user
+        """
+        Get memories for a user.
         
-        Handles different backend response structures:
-        1. Standard: {"status": "success", "data": {...}}
-        2. Direct: {"user_id": "...", "memories": {...}}
+        Handles different backend response structures to ensure robustness.
+        
+        Args:
+            user_id (str): The user ID to retrieve memories for.
+            
+        Returns:
+            Dict[str, Any]: Standardized response dictionary containing memory data.
         """
         try:
             response = requests.get(f"{self.base_url}/api/v1/memory/user/{user_id}", timeout=10)
@@ -72,7 +107,7 @@ class APIClient:
             
             # Polymorphic handling of backend response
             if "status" in data:
-                # Type 1: Standard response
+                # Type 1: Standard response wrapper
                 return data
             elif "memories" in data:
                 # Type 2: Direct response (found in route/memory.py during review)
@@ -82,8 +117,8 @@ class APIClient:
                     "message": "Memories retrieved successfully"
                 }
             else:
-                # Unknown structure, treat body as data?
-                # Only if it looks like a memory object
+                # Unknown structure, treat body as data if it looks like a memory object
+                # This is a defensive coding practice
                 if "user_preferences" in data:
                      return {
                         "status": "success",
@@ -106,12 +141,22 @@ class APIClient:
             return {"status": "error", "message": str(e), "data": {}}
             
     def extract_memory(self, messages: List[Dict[str, str]], user_id: str = "default_user") -> Dict[str, Any]:
-        """Extract memory from chat messages"""
+        """
+        Extract memory from chat messages.
+        
+        Args:
+            messages (List[Dict[str, str]]): List of message dicts (role, content).
+            user_id (str): The user ID associated with the messages.
+            
+        Returns:
+            Dict[str, Any]: Backend response with extraction status and data.
+        """
         try:
             payload = {
                 "messages": messages,
                 "user_id": user_id
             }
+            # High timeout for memory extraction as it involves heavy processing
             response = requests.post(f"{self.base_url}/api/v1/memory/extract", json=payload, timeout=60)
             response.raise_for_status()
             return response.json()
@@ -128,7 +173,17 @@ class APIClient:
 
     def get_generic_response(self, query: str, user_id: str = "default_user") -> Dict[str, Any]:
         """
-        Get generic (non-personalized) response for BEFORE comparison
+        Get generic (non-personalized) response for BEFORE comparison.
+        
+        This endpoint is used to show the contrast between standard AI answers
+        and the personalized ones.
+        
+        Args:
+            query (str): The user's query.
+            user_id (str): User ID (optional, mainly for logging).
+            
+        Returns:
+            Dict[str, Any]: The generic response from the backend.
         """
         try:
             payload = {
@@ -139,7 +194,7 @@ class APIClient:
             response = requests.post(
                 f"{self.base_url}/api/v1/personality/generic",
                 json=payload,
-                timeout=30  # Shorter timeout for generic response
+                timeout=30  # Shorter timeout for generic response as it's simpler
             )
             
             response.raise_for_status()

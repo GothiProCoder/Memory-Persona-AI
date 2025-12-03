@@ -1,15 +1,16 @@
 """
-Memory Extraction Agent using LangChain's create_agent()
-https://docs.langchain.com/oss/python/langchain/agents
-https://docs.langchain.com/oss/python/langchain/structured-output
+Memory Extraction Agent using LangChain's create_agent().
+
+This module defines the agent responsible for analyzing chat history and extracting
+structured information about the user, including preferences, emotional patterns,
+and memorable facts. It uses Google's Gemini model with structured output.
 """
 
 from typing import Any, Dict, List
 from dataclasses import dataclass
 from langchain.agents import create_agent
-from langchain.agents.structured_output import ProviderStrategy, ToolStrategy
+from langchain.agents.structured_output import ToolStrategy
 from langchain.messages import HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from schemas.memory_schemas import MemoryExtractionResult
 from models.gemini_model import ModelFactory
@@ -26,8 +27,9 @@ logger = get_logger(__name__)
 @dataclass
 class MemoryExtractionContext:
     """
-    Context for memory extraction agent
-    https://docs.langchain.com/oss/python/langchain/runtime
+    Context for memory extraction agent.
+    
+    Holds runtime context data required by the agent during execution.
     """
     user_id: str
     message_count: int
@@ -35,40 +37,43 @@ class MemoryExtractionContext:
 
 class MemoryExtractionAgent:
     """
-    Agent for extracting user memories, preferences, and emotional patterns from chat history
-    Uses create_agent() with ProviderStrategy for Gemini structured output
-    https://docs.langchain.com/oss/python/langchain/agents
-    https://docs.langchain.com/oss/python/langchain/structured-output
+    Agent for extracting user memories, preferences, and emotional patterns from chat history.
+    
+    Uses create_agent() with ToolStrategy for Gemini structured output to ensure
+    the response conforms to the `MemoryExtractionResult` schema.
     """
     
     def __init__(self):
-        """Initialize the memory extraction agent"""
+        """
+        Initialize the memory extraction agent.
+        
+        Sets up the model with a higher timeout for long processing and gets
+        the global memory store instance.
+        """
         self.model = ModelFactory.get_model().with_config(timeout=60)
         self.store = get_memory_store()
         self._agent = None
     
     def _build_agent(self) -> Any:
         """
-        Build the memory extraction agent using create_agent()
-        https://docs.langchain.com/oss/python/langchain/agents
-        https://docs.langchain.com/oss/python/langchain/structured-output
+        Build the memory extraction agent using create_agent().
+        
+        Configures the agent with the Gemini model and a structured output strategy.
+        It uses `ToolStrategy` to force the model to output data matching the
+        `MemoryExtractionResult` Pydantic model.
+        
+        Returns:
+            Any: The compiled LangChain agent runnable.
+            
+        Raises:
+            MemoryExtractionError: If agent creation fails.
         """
         if self._agent is not None:
             return self._agent
         
         try:
             logger.info("Building memory extraction agent...")
-            
-            # Create agent with ProviderStrategy for Gemini native structured output
-            # https://docs.langchain.com/oss/python/langchain/structured-output
-            # self._agent = create_agent(
-            #     model=self.model,
-            #     tools=[],  # Memory extraction doesn't need external tools
-            #     response_format=ProviderStrategy(MemoryExtractionResult),
-            #     system_prompt=self._get_system_prompt(),
-            #     context_schema=MemoryExtractionContext,
-            # )
-            
+             
             self._agent = create_agent(
                 model=self.model,
                 tools=[],
@@ -88,7 +93,12 @@ class MemoryExtractionAgent:
             raise MemoryExtractionError(f"Agent creation failed: {str(e)}")
     
     def _get_system_prompt(self) -> str:
-        """System prompt for memory extraction with explicit JSON instruction"""
+        """
+        System prompt for memory extraction with explicit JSON instruction.
+        
+        Returns:
+            str: The detailed system prompt guiding the model on how to extract information.
+        """
         return """You are an expert memory extraction specialist. Analyze the provided chat conversation and extract structured insights about the user.
 
     EXTRACTION GUIDELINES:
@@ -128,18 +138,21 @@ class MemoryExtractionAgent:
     
     def extract_memories(self, messages: List[Dict[str, str]], user_id: str = "default_user") -> Dict[str, Any]:
         """
-        Extract memories from a list of chat messages
+        Extract memories from a list of chat messages.
+        
+        Orchestrates the extraction process: formats messages, invokes the agent,
+        validates the structured output, and saves the result to the store.
         
         Args:
-            messages: List of chat messages [{"role": "user", "content": "..."}, ...]
-            user_id: User identifier for storing memories
+            messages (List[Dict[str, str]]): List of chat messages [{"role": "user", "content": "..."}, ...]
+            user_id (str): User identifier for storing memories.
             
         Returns:
-            Dictionary containing extracted memories
+            Dict[str, Any]: Dictionary containing extracted memories.
             
         Raises:
-            MemoryExtractionError: If extraction fails
-            StructuredOutputError: If structured output parsing fails
+            MemoryExtractionError: If extraction fails generally.
+            StructuredOutputError: If structured output parsing fails.
         """
         try:
             logger.info(f"Starting memory extraction for {len(messages)} messages...")
@@ -149,36 +162,17 @@ class MemoryExtractionAgent:
             # Convert messages to formatted string for analysis
             formatted_messages = self._format_messages(messages)
             
-            # Invoke agent with structured output
-            # https://docs.langchain.com/oss/python/langchain/agents
-            # result = agent.invoke(
-            #     {
-            #         "messages": [HumanMessage(content=formatted_messages)]
-            #     },
-            #     context=MemoryExtractionContext(
-            #         user_id=user_id,
-            #         message_count=len(messages)
-            #     )
-            # )
-            
+            # Invoke the agent with a timeout and retry logic
             result = agent.invoke(
                 {"messages": [HumanMessage(content=formatted_messages)]},
                 config={"timeout": 60, "max_retries": 2}  # Add timeout & retry
             )
 
-            
-            # Extract structured response
-            # if "structured_response" not in result:
-            #     logger.error("No structured response found in agent output")
-            #     raise StructuredOutputError("Agent did not return structured response")
-            
-            # structured_response = result["structured_response"]
-            # logger.info(f"✓ Memory extraction successful")
-            
             # Extract structured response from agent state
             logger.debug(f"Full agent result keys: {list(result.keys())}")
             if "structured_response" not in result:
                 # Fallback: check if result is already the Pydantic object
+                # This handles cases where the agent returns the output directly
                 if isinstance(result, dict) and "output" in result:
                     structured_response = result["output"]
                 else:
@@ -199,15 +193,7 @@ class MemoryExtractionAgent:
             logger.info(f"  - Emotional patterns found: {len(structured_response.emotional_patterns)}")
             logger.info(f"  - Memorable facts captured: {len(structured_response.memorable_facts)}")
             
-            # Save to memory store
-            # https://docs.langchain.com/oss/python/langchain/long-term-memory
-            # memory_data = {
-            #     "user_preferences": [p.dict() for p in structured_response.user_preferences],
-            #     "emotional_patterns": [p.dict() for p in structured_response.emotional_patterns],
-            #     "memorable_facts": [f.dict() for f in structured_response.memorable_facts],
-            #     "summary": structured_response.summary
-            # }
-            
+            # Serialize the structured response to a dictionary for storage
             memory_data = {
                 "user_preferences": [p.model_dump() for p in structured_response.user_preferences],
                 "emotional_patterns": [p.model_dump() for p in structured_response.emotional_patterns],
@@ -229,7 +215,18 @@ class MemoryExtractionAgent:
             raise MemoryExtractionError(f"Memory extraction failed: {str(e)}")
     
     def _format_messages(self, messages: List[Dict[str, str]]) -> str:
-        """Format messages for the agent"""
+        """
+        Format messages for the agent.
+        
+        Converts the list of message dictionaries into a single string format
+        suitable for LLM consumption.
+        
+        Args:
+            messages (List[Dict[str, str]]): List of message dictionaries.
+            
+        Returns:
+            str: Formatted conversation string.
+        """
         formatted = "Analyze the following conversation:\n\n"
         for i, msg in enumerate(messages, 1):
             role = msg.get("role", "unknown").upper()
@@ -239,7 +236,14 @@ class MemoryExtractionAgent:
 
 
 def get_memory_extraction_agent() -> MemoryExtractionAgent:
-    """Get or create the global memory extraction agent instance"""
+    """
+    Get or create the global memory extraction agent instance.
+    
+    Implements Singleton pattern for the agent to reuse resources.
+    
+    Returns:
+        MemoryExtractionAgent: The global agent instance.
+    """
     if not hasattr(get_memory_extraction_agent, '_instance'):
         get_memory_extraction_agent._instance = MemoryExtractionAgent()
     return get_memory_extraction_agent._instance

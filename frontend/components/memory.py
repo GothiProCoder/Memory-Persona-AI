@@ -2,6 +2,15 @@ import streamlit as st
 from frontend.assets.icons import Icons
 
 def render_memory(api_client):
+    """
+    Render the Memory Dashboard interface.
+    
+    This function displays the user's stored memories (preferences, patterns, facts)
+    and provides a tool for manual memory extraction from text.
+    
+    Args:
+        api_client: The initialized API client instance.
+    """
     st.markdown(f"""
         <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px;">
             <div style="color: #6C63FF;">{Icons.BRAIN}</div>
@@ -19,7 +28,7 @@ def render_memory(api_client):
             if st.button("Refresh", key="refresh_memory"):
                 st.rerun()
 
-        # Fetch Data
+        # Fetch Data from backend
         with st.spinner("Accessing Memory Core..."):
             result = api_client.get_memory(st.session_state.user_id)
         
@@ -29,7 +38,7 @@ def render_memory(api_client):
             if not data:
                 st.info("No memory data found for this user yet. Use the Extraction Tool to analyze a conversation!")
             else:
-                # Stats Row
+                # Stats Row - Summary counts
                 c1, c2, c3 = st.columns(3)
                 with c1:
                     st.metric("Preferences", len(data.get('user_preferences', [])))
@@ -40,12 +49,14 @@ def render_memory(api_client):
                 
                 st.markdown("---")
 
+                # Preferences Section
                 st.markdown("### User Preferences")
                 if data.get('user_preferences'):
                     cols = st.columns(2)
                     for i, pref in enumerate(data['user_preferences']):
                         with cols[i % 2]:
                             confidence = float(pref.get('confidence', 0))
+                            # Custom card with confidence bar
                             st.markdown(f"""
                                 <div class="card-container">
                                     <div style="color: #888; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 4px;">{pref.get('category', 'General')}</div>
@@ -61,6 +72,7 @@ def render_memory(api_client):
                 else:
                     st.info("No preferences recorded yet.")
 
+                # Emotional Patterns Section
                 st.markdown("### Emotional Patterns")
                 if data.get('emotional_patterns'):
                     for pattern in data['emotional_patterns']:
@@ -76,6 +88,7 @@ def render_memory(api_client):
                 else:
                     st.info("No emotional patterns detected.")
                 
+                # Memorable Facts Section
                 st.markdown("### Memorable Facts")
                 if data.get('memorable_facts'):
                     for fact in data['memorable_facts']:
@@ -109,7 +122,7 @@ def render_memory(api_client):
             if not conversation_text:
                 st.warning("Please enter some text.")
             else:
-                # Parse text into messages format
+                # Parse text into messages format required by API
                 messages = []
                 lines = conversation_text.split('\n')
                 for line in lines:
