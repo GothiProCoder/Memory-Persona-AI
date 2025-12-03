@@ -182,6 +182,7 @@ Memory-Persona-AI/
 <details open>
 <summary>Click to view Troubleshooting Guide</summary>
 <br>
+
 | Issue | Solution |
 |-------|----------|
 | `ModuleNotFoundError: No module named 'langchain_core.pydantic_v1'` | Follow (<a href="#step-3">Step 3</a>) |
