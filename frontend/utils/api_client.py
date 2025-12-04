@@ -27,7 +27,8 @@ class APIClient:
         if base_url:
             self.base_url = base_url
         else:
-            self.base_url = os.getenv("BACKEND_URL", "http://localhost:8000") # Replace with https://memory-persona-ai.onrender.com if you dont want to locally host the backend.
+            self.base_url = os.getenv("BACKEND_URL", "https://memory-persona-ai.onrender.com/") # Replace with http://localhost:8000 if trying from own system.
+                                                                                                 # In that case, you will need to setup gemini api key in the .env file
         self.mock_mode = False  # Disabled mock mode to integrate with real backend
 
     def get_health(self) -> Dict[str, Any]:
